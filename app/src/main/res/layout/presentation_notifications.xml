@@ -156,6 +156,73 @@
 
     </androidx.cardview.widget.CardView>
 
+    <!-- Menu d'applications AR - Visible uniquement avec manette -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cvAppMenu"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="#DD000000"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/rvNotifications"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/cvNavigation">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Titre du menu -->
+            <TextView
+                android:id="@+id/tvMenuTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🎮 Menu Applications"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="16dp"
+                android:shadowColor="#000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="4" />
+
+            <!-- Liste des applications -->
+            <LinearLayout
+                android:id="@+id/llAppList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Les éléments de menu seront ajoutés dynamiquement -->
+
+            </LinearLayout>
+
+            <!-- Instructions manette -->
+            <TextView
+                android:id="@+id/tvMenuInstructions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="↕️ D-Pad: Naviguer • 🎯 A: Sélectionner • 🔙 B: Fermer"
+                android:textColor="#CCFFFFFF"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:shadowColor="#000000"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2" />
+
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
     <!-- Zone des notifications - prend le reste de l'écran -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvNotifications"

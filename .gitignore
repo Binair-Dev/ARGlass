@@ -92,3 +92,15 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
+# Large files
+*.zip
+*.tar.gz
+*.7z
+
+# Documentation files (generated)
+*.md
+!README.md
+
+# IDE settings
+.claude/

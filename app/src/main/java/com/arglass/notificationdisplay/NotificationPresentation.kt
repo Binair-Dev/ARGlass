@@ -58,6 +58,15 @@ class NotificationPresentation(
     private var lastNavigationDetails: String? = null
     private var navigationActiveTime: Long = 0
 
+    // Menu d'applications et manette Bluetooth
+    private lateinit var cvAppMenu: androidx.cardview.widget.CardView
+    private lateinit var tvMenuTitle: TextView
+    private lateinit var llAppList: android.widget.LinearLayout
+    private lateinit var tvMenuInstructions: TextView
+    private lateinit var bluetoothGamepadManager: BluetoothGamepadManager
+    private lateinit var appLauncherMenu: AppLauncherMenu
+    private var isGamepadConnected = false
+
     private val timeHandler = Handler(Looper.getMainLooper())
     private val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     private val fullDateFormat = SimpleDateFormat("dd MMM yyyy", Locale.FRANCE)
@@ -97,6 +106,7 @@ class NotificationPresentation(
         setupNotificationsList()
         setupMiniMap()
         setupLocationServices()
+        setupGamepadAndMenu()
         startTimeUpdates()
         registerNotificationReceiver()
 
@@ -115,6 +125,12 @@ class NotificationPresentation(
         ivDirectionIcon = findViewById(R.id.ivDirectionIcon)
         miniMap = findViewById(R.id.miniMap)
         rvNotifications = findViewById(R.id.rvNotifications)
+
+        // Menu d'applications
+        cvAppMenu = findViewById(R.id.cvAppMenu)
+        tvMenuTitle = findViewById(R.id.tvMenuTitle)
+        llAppList = findViewById(R.id.llAppList)
+        tvMenuInstructions = findViewById(R.id.tvMenuInstructions)
     }
 
     private fun setupNotificationsList() {
@@ -578,6 +594,205 @@ class NotificationPresentation(
         }
     }
 
+    // ===== FONCTIONS MANETTE ET MENU =====
+
+    private fun setupGamepadAndMenu() {
+        // Initialiser le gestionnaire de manette
+        bluetoothGamepadManager = BluetoothGamepadManager(context, gamepadListener)
+        bluetoothGamepadManager.startListening()
+
+        // Initialiser le menu d'applications
+        appLauncherMenu = AppLauncherMenu(context)
+        appLauncherMenu.setNavigationListener(menuNavigationListener)
+        appLauncherMenu.loadInstalledApps()
+
+        android.util.Log.d("NotificationPresentation", "🎮 Système manette + menu initialisé")
+    }
+
+    private val gamepadListener = object : BluetoothGamepadManager.GamepadListener {
+        override fun onGamepadConnected(device: android.view.InputDevice) {
+            isGamepadConnected = true
+            android.util.Log.d("NotificationPresentation", "🎮 Manette connectée: ${device.name}")
+
+            // Afficher un indicateur de manette connectée
+            timeHandler.post {
+                tvMenuTitle.text = "🎮 Menu Applications (${device.name})"
+                updateGamepadStatus()
+            }
+        }
+
+        override fun onGamepadDisconnected() {
+            isGamepadConnected = false
+            android.util.Log.d("NotificationPresentation", "🎮 Manette déconnectée")
+
+            timeHandler.post {
+                tvMenuTitle.text = "🎮 Menu Applications"
+                updateGamepadStatus()
+
+                // Masquer le menu si ouvert
+                if (appLauncherMenu.isMenuVisible()) {
+                    appLauncherMenu.hideMenu()
+                }
+            }
+        }
+
+        override fun onButtonPressed(keyCode: Int, event: android.view.KeyEvent) {
+            timeHandler.post {
+                handleGamepadButton(keyCode, event)
+            }
+        }
+
+        override fun onJoystickMoved(x: Float, y: Float, event: android.view.MotionEvent) {
+            // Gérer les mouvements de joystick si nécessaire
+            if (Math.abs(y) > 0.7f) {
+                timeHandler.post {
+                    if (y < 0) {
+                        appLauncherMenu.navigateUp()
+                    } else {
+                        appLauncherMenu.navigateDown()
+                    }
+                }
+            }
+        }
+
+        override fun onDPadPressed(direction: BluetoothGamepadManager.Direction) {
+            timeHandler.post {
+                when (direction) {
+                    BluetoothGamepadManager.Direction.UP -> appLauncherMenu.navigateUp()
+                    BluetoothGamepadManager.Direction.DOWN -> appLauncherMenu.navigateDown()
+                    BluetoothGamepadManager.Direction.CENTER -> appLauncherMenu.selectCurrentItem()
+                    BluetoothGamepadManager.Direction.LEFT -> {
+                        if (!appLauncherMenu.isMenuVisible()) {
+                            appLauncherMenu.showMenu()
+                        }
+                    }
+                    BluetoothGamepadManager.Direction.RIGHT -> {
+                        if (appLauncherMenu.isMenuVisible()) {
+                            appLauncherMenu.hideMenu()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private val menuNavigationListener = object : AppLauncherMenu.MenuNavigationListener {
+        override fun onMenuItemSelected(selectedIndex: Int, totalItems: Int) {
+            updateMenuDisplay()
+        }
+
+        override fun onAppLaunched(appInfo: AppInfo) {
+            android.util.Log.d("NotificationPresentation", "🚀 App lancée: ${appInfo.name}")
+            // Optionnel: afficher un toast ou une confirmation
+        }
+
+        override fun onMenuClosed() {
+            cvAppMenu.visibility = android.view.View.GONE
+            android.util.Log.d("NotificationPresentation", "📋 Menu fermé")
+        }
+    }
+
+    private fun handleGamepadButton(keyCode: Int, event: android.view.KeyEvent) {
+        when (keyCode) {
+            android.view.KeyEvent.KEYCODE_BUTTON_START,
+            android.view.KeyEvent.KEYCODE_MENU -> {
+                // Bouton Menu/Start: afficher/masquer le menu
+                if (appLauncherMenu.isMenuVisible()) {
+                    appLauncherMenu.hideMenu()
+                } else {
+                    appLauncherMenu.showMenu()
+                }
+            }
+            android.view.KeyEvent.KEYCODE_BUTTON_B,
+            android.view.KeyEvent.KEYCODE_BACK -> {
+                // Bouton B/Back: fermer le menu
+                if (appLauncherMenu.isMenuVisible()) {
+                    appLauncherMenu.hideMenu()
+                }
+            }
+            android.view.KeyEvent.KEYCODE_BUTTON_A -> {
+                // Bouton A: sélectionner l'élément
+                if (appLauncherMenu.isMenuVisible()) {
+                    appLauncherMenu.selectCurrentItem()
+                } else {
+                    // Si pas de menu, ouvrir le menu
+                    appLauncherMenu.showMenu()
+                }
+            }
+        }
+    }
+
+    private fun updateGamepadStatus() {
+        val statusText = if (isGamepadConnected) {
+            "Manette connectée - Appuyez sur START pour le menu"
+        } else {
+            "Connectez une manette Bluetooth pour accéder au menu"
+        }
+
+        tvMenuInstructions.text = if (isGamepadConnected) {
+            "🎮 START: Menu • ↕️ D-Pad: Naviguer • 🎯 A: Sélectionner • 🔙 B: Fermer"
+        } else {
+            "🎮 Connectez une manette Bluetooth pour utiliser le menu"
+        }
+    }
+
+    private fun updateMenuDisplay() {
+        if (!appLauncherMenu.isMenuVisible()) {
+            cvAppMenu.visibility = android.view.View.GONE
+            return
+        }
+
+        cvAppMenu.visibility = android.view.View.VISIBLE
+        llAppList.removeAllViews()
+
+        val visibleApps = appLauncherMenu.getVisibleApps(5)
+
+        for ((appInfo, isSelected) in visibleApps) {
+            val itemView = android.view.LayoutInflater.from(context)
+                .inflate(R.layout.item_app_menu, llAppList, false)
+
+            val tvAppName = itemView.findViewById<TextView>(R.id.tvAppName)
+            val ivAppIcon = itemView.findViewById<android.widget.ImageView>(R.id.ivAppIcon)
+            val tvSelectionIndicator = itemView.findViewById<TextView>(R.id.tvSelectionIndicator)
+
+            tvAppName.text = appInfo.name
+            if (appInfo.icon != null) {
+                ivAppIcon.setImageDrawable(appInfo.icon)
+            }
+
+            if (isSelected) {
+                tvSelectionIndicator.visibility = android.view.View.VISIBLE
+                tvAppName.textSize = 18f
+                tvAppName.setTextColor(android.graphics.Color.parseColor("#00FF00"))
+            } else {
+                tvSelectionIndicator.visibility = android.view.View.GONE
+                tvAppName.textSize = 16f
+                tvAppName.setTextColor(android.graphics.Color.WHITE)
+            }
+
+            llAppList.addView(itemView)
+        }
+
+        android.util.Log.d("NotificationPresentation", "📋 Menu mis à jour: ${visibleApps.size} apps visibles")
+    }
+
+    // Gérer les événements clavier/manette
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        return if (isGamepadConnected && bluetoothGamepadManager.handleKeyEvent(keyCode, event)) {
+            true
+        } else {
+            super.onKeyDown(keyCode, event)
+        }
+    }
+
+    override fun onGenericMotionEvent(event: android.view.MotionEvent): Boolean {
+        return if (isGamepadConnected && bluetoothGamepadManager.handleMotionEvent(event)) {
+            true
+        } else {
+            super.onGenericMotionEvent(event)
+        }
+    }
+
     override fun onStop() {
         super.onStop()
         timeHandler.removeCallbacks(timeUpdateRunnable)
@@ -592,12 +807,17 @@ class NotificationPresentation(
             miniMap.onDetach()
         }
 
+        // Arrêter la manette
+        if (::bluetoothGamepadManager.isInitialized) {
+            bluetoothGamepadManager.stopListening()
+        }
+
         try {
             context.unregisterReceiver(notificationReceiver)
         } catch (e: Exception) {
             // Receiver might not be registered
         }
 
-        android.util.Log.d("NotificationPresentation", "🧹 Ressources nettoyées (GPS + carte)")
+        android.util.Log.d("NotificationPresentation", "🧹 Ressources nettoyées (GPS + carte + manette)")
     }
 }
