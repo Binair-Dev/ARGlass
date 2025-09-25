@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ARGlass Notification Display</string>
+    <string name="notification_service_label">ARGlass Notification Service</string>
+    <string name="enable_notification_access">Activer l\'accès aux notifications</string>
+    <string name="notification_permission_required">Permission d\'accès aux notifications requise</string>
+    <string name="external_display_detected">Écran externe détecté</string>
+    <string name="no_external_display">Aucun écran externe détecté</string>
+    <string name="service_running">Service en cours d\'exécution</string>
+</resources>
